@@ -161,10 +161,43 @@ h2 small { font-family: var(--body); font-size: 12px; letter-spacing: .26em; col
 
 /* risultati */
 .results { display: grid; gap: 10px; }
-.result {
+.result { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; }
+.result > summary {
   display: grid; grid-template-columns: 130px minmax(0, 1fr) auto; gap: 14px; align-items: center;
-  background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px;
+  padding: 14px 16px; cursor: pointer; list-style: none;
 }
+.result > summary::-webkit-details-marker { display: none; }
+.result .more { grid-column: 1 / -1; font-size: 12px; color: var(--gold); letter-spacing: .08em; text-transform: uppercase; display: flex; align-items: center; gap: 6px; }
+.result .more::after { content: "▾"; transition: transform .2s; }
+.result[open] .more::after { transform: rotate(180deg); }
+.result[open] .more span::before { content: "Nascondi"; }
+.result:not([open]) .more span::before { content: "Vedi marcatori"; }
+.scorers { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; padding: 4px 16px 16px; border-top: 1px solid var(--line); margin: 0 16px; padding-inline: 0; padding-top: 14px; }
+.scorers h4 { margin: 0 0 8px; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.scorers ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.scorers li { display: flex; justify-content: space-between; gap: 10px; }
+.scorers li b { font-family: var(--display); font-weight: 400; color: var(--gold); font-variant-numeric: tabular-nums; }
+.scorers li.ours span { color: var(--gold-hi); font-weight: 600; }
+.scorers .none { color: var(--muted); font-size: 13px; }
+
+/* statistiche */
+.stats-top { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 18px; }
+.stat { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; }
+.stat b { display: block; font-family: var(--display); font-weight: 400; font-size: 32px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.stat.gold b { color: var(--gold); }
+.chart-title { font-size: 12px; letter-spacing: .2em; text-transform: uppercase; color: var(--gold); margin: 0 0 10px; font-weight: 500; }
+.scorer-table { display: grid; gap: 6px; }
+.srow { display: grid; grid-template-columns: 28px 44px minmax(0, 1fr) minmax(60px, 34%) 28px; gap: 10px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 9px 12px; }
+.srow .pos { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 13px; }
+.srow .n { font-family: var(--display); color: var(--gold); font-size: 22px; line-height: 1; }
+.srow .who { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.srow .who small { color: var(--muted); font-weight: 400; }
+.srow .bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.srow .bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-hi)); border-radius: 3px; }
+.srow .g { font-family: var(--display); font-size: 22px; text-align: right; font-variant-numeric: tabular-nums; }
+.srow.top { border-color: color-mix(in srgb, var(--gold) 55%, var(--line)); }
+.srow.zero .g, .srow.zero .who { color: var(--muted); }
 .result .date { font-size: 12px; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; }
 .result .score { font-family: var(--display); font-size: 26px; font-variant-numeric: tabular-nums; display: flex; align-items: center; gap: 10px; white-space: nowrap; }
 .result .match { display: grid; gap: 8px; font-weight: 600; min-width: 0; }
@@ -201,6 +234,8 @@ dialog button {
   .team img { width: 72px; height: 72px; }
   .result { grid-template-columns: minmax(0, 1fr) auto; }
   .result .date { grid-column: 1 / -1; }
+  .result > summary { grid-template-columns: minmax(0, 1fr) auto; }
+  .stats-top { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (prefers-reduced-motion: reduce) { .player img, .player, .crest3d img { transition: none; } }
 </style>
@@ -240,6 +275,15 @@ dialog button {
       <div class="results" id="results"></div>
     </div>
   </section>
+
+  <section id="statistiche" aria-labelledby="t-stat">
+    <div class="wrap">
+      <h2 id="t-stat">Statistiche <small id="stat-sub">Campionato Invernale 2026</small></h2>
+      <div class="stats-top" id="stats-top"></div>
+      <p class="chart-title">Classifica marcatori</p>
+      <div class="scorer-table" id="scorers"></div>
+    </div>
+  </section>
 </main>
 
 <footer>
@@ -273,8 +317,11 @@ const IN_ARRIVO = [
   { titolo: "L'allenatore",    testo: "Presentazione in arrivo" }
 ];
 const PARTITE = [
-  { giornata: 1, data: "2026-10-13T21:00:00+02:00", competizione: "Salamaro League", avversario: "FB Magic Bar", stemma: "img/magic-bar.png",
-    casa: false, golNostri: 1, golLoro: 11 },
+  { giornata: 1, data: "2026-10-13T21:00:00+02:00", competizione: "Campionato Invernale 2026", avversario: "FB Magic Bar", stemma: "img/magic-bar.png",
+    casa: false, golNostri: 1, golLoro: 11,
+    /* marcatori: i nostri per numero di maglia, gli avversari per cognome */
+    marcatoriNostri: [ { num: 10, gol: 1 } ],
+    marcatoriLoro: [ { nome: "Polleggioni", gol: 5 }, { nome: "Favaretto", gol: 2 }, { nome: "Camilli", gol: 2 }, { nome: "Andreoli", gol: 1 }, { nome: "Bruni", gol: 1 } ] },
   { data: "2026-10-22T21:00:00+02:00", avversario: "Young Girls 2010", stemma: "img/young-girls.png",
     campo: "Salamaro Sport Center", citta: "Viterbo", poster: "img/match-day.jpg", posterUscita: "2026-10-22T12:00:00+02:00",
     golNostri: null, golLoro: null }
@@ -286,6 +333,12 @@ const mesi = ["gennaio","febbraio","marzo","aprile","maggio","giugno","luglio","
 const fmtData = d => `${giorni[d.getDay()]} ${d.getDate()} ${mesi[d.getMonth()]}`;
 const fmtOra = d => d.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Rome" });
 const stessoGiorno = (a, b) => a.toDateString() === b.toDateString();
+const uscito = p => !p.uscita || new Date() >= new Date(p.uscita);
+function nomeGiocatore(num) {
+  const p = SQUADRA.find(x => x.num === num);
+  if (!p) return `#${num}`;
+  return uscito(p) ? `${p.nome} <small>#${p.num}</small>` : `#${p.num} <small>· in arrivo</small>`;
+}
 function el(tag, cls, html) { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
 
 const lb = document.getElementById("lightbox"), lbImg = document.getElementById("lb-img");
@@ -344,10 +397,23 @@ lb.addEventListener("click", e => { if (e.target === lb) lb.close(); });
       const casa = p.casa !== false;
       const sx = casa ? ["Havaianas F.C.", p.golNostri, "img/stemma.png"] : [p.avversario, p.golLoro, p.stemma];
       const dx = casa ? [p.avversario, p.golLoro, p.stemma] : ["Havaianas F.C.", p.golNostri, "img/stemma.png"];
-      const r = el("div", "result");
-      r.innerHTML = `<span class="date">${etichetta}${p.competizione ? `<br>${p.competizione}` : ""}</span>
+      const lista = (arr, nostri) => {
+        if (!arr || !arr.length) return `<p class="none">Nessun marcatore</p>`;
+        return "<ul>" + arr.slice().sort((a, b) => b.gol - a.gol).map(m => {
+          const nome = nostri ? nomeGiocatore(m.num) : m.nome;
+          return `<li class="${nostri ? "ours" : ""}"><span>${nome}</span><b>${m.gol}</b></li>`;
+        }).join("") + "</ul>";
+      };
+      const blocco = (nome, arr, nostri) => `<div><h4>${nome}</h4>${lista(arr, nostri)}</div>`;
+      const haMarcatori = p.marcatoriNostri || p.marcatoriLoro;
+      const r = el("details", "result");
+      r.innerHTML = `<summary><span class="date">${etichetta}${p.competizione ? `<br>${p.competizione}` : ""}</span>
         <span class="match"><span class="t"><img src="${sx[2]}" alt="">${sx[0]}</span><span class="t"><img src="${dx[2]}" alt="">${dx[0]}</span></span>
-        <span class="score">${sx[1]} – ${dx[1]} <b class="esito ${esito[1]}" title="${esito[2]}">${esito[0]}</b></span>`;
+        <span class="score">${sx[1]} – ${dx[1]} <b class="esito ${esito[1]}" title="${esito[2]}">${esito[0]}</b></span>
+        ${haMarcatori ? '<span class="more"><span></span></span>' : ""}</summary>
+        ${haMarcatori ? `<div class="scorers">${casa
+          ? blocco("Havaianas F.C.", p.marcatoriNostri, true) + blocco(p.avversario, p.marcatoriLoro, false)
+          : blocco(p.avversario, p.marcatoriLoro, false) + blocco("Havaianas F.C.", p.marcatoriNostri, true)}</div>` : ""}`;
       res.appendChild(r);
     });
   }
@@ -387,8 +453,36 @@ function renderRosa() {
     g.appendChild(d);
   });
 }
+/* statistiche: calcolate dai marcatori delle partite giocate */
+function renderStats() {
+  const giocate = PARTITE.filter(p => p.golNostri != null);
+  const v = giocate.filter(p => p.golNostri > p.golLoro).length;
+  const pa = giocate.filter(p => p.golNostri === p.golLoro).length;
+  const s = giocate.filter(p => p.golNostri < p.golLoro).length;
+  const gf = giocate.reduce((t, p) => t + p.golNostri, 0), gs = giocate.reduce((t, p) => t + p.golLoro, 0);
+  document.getElementById("stats-top").innerHTML = `
+    <div class="stat"><b>${giocate.length}</b><span>Partite</span></div>
+    <div class="stat"><b>${v}-${pa}-${s}</b><span>V · P · S</span></div>
+    <div class="stat gold"><b>${gf}</b><span>Gol fatti</span></div>
+    <div class="stat"><b>${gs}</b><span>Gol subiti</span></div>`;
+  const gol = {};
+  SQUADRA.forEach(p => gol[p.num] = 0);
+  giocate.forEach(p => (p.marcatoriNostri || []).forEach(m => gol[m.num] = (gol[m.num] || 0) + m.gol));
+  const max = Math.max(1, ...Object.values(gol));
+  const righe = SQUADRA.slice().sort((a, b) => gol[b.num] - gol[a.num] || a.num - b.num);
+  let pos = 0, prev = null;
+  document.getElementById("scorers").innerHTML = righe.map((p, i) => {
+    if (gol[p.num] !== prev) { pos = i + 1; prev = gol[p.num]; }
+    const g = gol[p.num];
+    const nome = uscito(p) ? `${p.nome}${p.capitano ? " <small>(C)</small>" : ""}` : `<small>In arrivo</small>`;
+    return `<div class="srow ${g === 0 ? "zero" : ""} ${g > 0 && g === max ? "top" : ""}">
+      <span class="pos">${pos}°</span><span class="n">${p.num}</span><span class="who">${nome}</span>
+      <span class="bar"><i style="width:${(g / max * 100).toFixed(0)}%"></i></span><span class="g">${g}</span></div>`;
+  }).join("");
+}
 renderRosa();
-setInterval(renderRosa, 60000);
+renderStats();
+setInterval(() => { renderRosa(); renderStats(); }, 60000);
 
 /* ====== effetti 3D ====== */
 const calmo = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
