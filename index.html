@@ -162,11 +162,18 @@ h2 small { font-family: var(--body); font-size: 12px; letter-spacing: .26em; col
 /* risultati */
 .results { display: grid; gap: 10px; }
 .result {
-  display: grid; grid-template-columns: 90px minmax(0, 1fr) auto; gap: 14px; align-items: center;
+  display: grid; grid-template-columns: 130px minmax(0, 1fr) auto; gap: 14px; align-items: center;
   background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px;
 }
 .result .date { font-size: 12px; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; }
-.result .score { font-family: var(--display); font-size: 26px; font-variant-numeric: tabular-nums; }
+.result .score { font-family: var(--display); font-size: 26px; font-variant-numeric: tabular-nums; display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+.result .match { display: grid; gap: 8px; font-weight: 600; min-width: 0; }
+.result .match .t { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.result .match img { width: 30px; height: 30px; object-fit: contain; flex: none; }
+.esito { font-family: var(--body); font-size: 12px; font-weight: 700; width: 24px; height: 24px; border-radius: 4px; display: grid; place-items: center; }
+.esito.win { background: var(--gold); color: var(--bg); }
+.esito.loss { background: var(--line); color: var(--fg); }
+.esito.draw { background: var(--muted); color: var(--bg); }
 .empty { border: 1px dashed var(--line); border-radius: 6px; padding: 22px; color: var(--muted); text-align: center; }
 .empty b { color: var(--fg); font-weight: 600; }
 
@@ -266,6 +273,8 @@ const IN_ARRIVO = [
   { titolo: "L'allenatore",    testo: "Presentazione in arrivo" }
 ];
 const PARTITE = [
+  { giornata: 1, competizione: "Salamaro League", avversario: "FB Magic Bar", stemma: "img/magic-bar.png",
+    casa: false, golNostri: 1, golLoro: 11 },
   { data: "2026-10-22T21:00:00+02:00", avversario: "Young Girls 2010", stemma: "img/young-girls.png",
     campo: "Salamaro Sport Center", citta: "Viterbo", poster: "img/match-day.jpg", posterUscita: "2026-10-22T12:00:00+02:00",
     golNostri: null, golLoro: null }
@@ -328,12 +337,17 @@ lb.addEventListener("click", e => { if (e.target === lb) lb.close(); });
   if (!giocate.length) {
     res.appendChild(el("div", "empty", "<b>Nessuna partita ancora giocata.</b><br>Il primo risultato arriva dopo Havaianas F.C. – Young Girls 2010."));
   } else {
-    giocate.sort((a, b) => new Date(b.data) - new Date(a.data)).forEach(p => {
-      const d = new Date(p.data);
+    const chiave = p => p.data ? new Date(p.data).getTime() : 0;
+    giocate.sort((a, b) => (b.giornata || 0) - (a.giornata || 0) || chiave(b) - chiave(a)).forEach(p => {
+      const etichetta = [p.giornata ? `${p.giornata}ª giornata` : "", p.data ? (d => `${d.getDate()} ${mesi[d.getMonth()].slice(0,3)}`)(new Date(p.data)) : ""].filter(Boolean).join(" · ");
+      const esito = p.golNostri > p.golLoro ? ["V", "win", "Vittoria"] : p.golNostri < p.golLoro ? ["S", "loss", "Sconfitta"] : ["P", "draw", "Pareggio"];
+      const casa = p.casa !== false;
+      const sx = casa ? ["Havaianas F.C.", p.golNostri, "img/stemma.png"] : [p.avversario, p.golLoro, p.stemma];
+      const dx = casa ? [p.avversario, p.golLoro, p.stemma] : ["Havaianas F.C.", p.golNostri, "img/stemma.png"];
       const r = el("div", "result");
-      r.innerHTML = `<span class="date">${d.getDate()} ${mesi[d.getMonth()].slice(0,3)}</span>
-        <span>Havaianas F.C. – ${p.avversario}</span>
-        <span class="score">${p.golNostri} – ${p.golLoro}</span>`;
+      r.innerHTML = `<span class="date">${etichetta}${p.competizione ? `<br>${p.competizione}` : ""}</span>
+        <span class="match"><span class="t"><img src="${sx[2]}" alt="">${sx[0]}</span><span class="t"><img src="${dx[2]}" alt="">${dx[0]}</span></span>
+        <span class="score">${sx[1]} – ${dx[1]} <b class="esito ${esito[1]}" title="${esito[2]}">${esito[0]}</b></span>`;
       res.appendChild(r);
     });
   }
