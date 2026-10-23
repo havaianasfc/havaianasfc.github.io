@@ -391,7 +391,7 @@ lb.addEventListener("click", e => { if (e.target === lb) lb.close(); });
     res.appendChild(el("div", "empty", "<b>Nessuna partita ancora giocata.</b><br>Il primo risultato arriva dopo Havaianas F.C. – Young Girls 2010."));
   } else {
     const chiave = p => p.data ? new Date(p.data).getTime() : 0;
-    giocate.sort((a, b) => (b.giornata || 0) - (a.giornata || 0) || chiave(b) - chiave(a)).forEach(p => {
+    giocate.sort((a, b) => chiave(b) - chiave(a) || (b.giornata || 0) - (a.giornata || 0)).forEach(p => {
       const etichetta = [p.giornata ? `${p.giornata}ª giornata` : "", p.data ? (d => `${d.getDate()} ${mesi[d.getMonth()].slice(0,3)}`)(new Date(p.data)) : ""].filter(Boolean).join(" · ");
       const esito = p.golNostri > p.golLoro ? ["V", "win", "Vittoria"] : p.golNostri < p.golLoro ? ["S", "loss", "Sconfitta"] : ["P", "draw", "Pareggio"];
       const casa = p.casa !== false;
