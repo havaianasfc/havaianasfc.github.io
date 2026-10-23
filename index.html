@@ -324,7 +324,8 @@ const PARTITE = [
     marcatoriLoro: [ { nome: "Polleggioni", gol: 5 }, { nome: "Favaretto", gol: 2 }, { nome: "Camilli", gol: 2 }, { nome: "Andreoli", gol: 1 }, { nome: "Bruni", gol: 1 } ] },
   { data: "2026-10-22T21:00:00+02:00", competizione: "Campionato Invernale 2026", avversario: "Young Girls 2010", stemma: "img/young-girls.png",
     campo: "Salamaro Sport Center", citta: "Viterbo", poster: "img/match-day.jpg", posterUscita: "2026-10-22T12:00:00+02:00",
-    casa: true, golNostri: 6, golLoro: 5 }
+    casa: true, golNostri: 6, golLoro: 5,
+    marcatoriNostri: [ { num: 10, gol: 2 }, { nome: "Nikky", gol: 1 }, { num: 8, gol: 1 }, { num: 7, gol: 1 }, { nome: "Mez", gol: 1 } ] }
 ];
 /* =================================================== */
 
@@ -398,9 +399,10 @@ lb.addEventListener("click", e => { if (e.target === lb) lb.close(); });
       const sx = casa ? ["Havaianas F.C.", p.golNostri, "img/stemma.png"] : [p.avversario, p.golLoro, p.stemma];
       const dx = casa ? [p.avversario, p.golLoro, p.stemma] : ["Havaianas F.C.", p.golNostri, "img/stemma.png"];
       const lista = (arr, nostri) => {
-        if (!arr || !arr.length) return `<p class="none">Nessun marcatore</p>`;
+        if (!arr) return `<p class="none">Non ancora disponibili</p>`;
+        if (!arr.length) return `<p class="none">Nessun marcatore</p>`;
         return "<ul>" + arr.slice().sort((a, b) => b.gol - a.gol).map(m => {
-          const nome = nostri ? nomeGiocatore(m.num) : m.nome;
+          const nome = nostri && m.num != null ? nomeGiocatore(m.num) : m.nome;
           return `<li class="${nostri ? "ours" : ""}"><span>${nome}</span><b>${m.gol}</b></li>`;
         }).join("") + "</ul>";
       };
@@ -467,16 +469,22 @@ function renderStats() {
     <div class="stat"><b>${gs}</b><span>Gol subiti</span></div>`;
   const gol = {};
   SQUADRA.forEach(p => gol[p.num] = 0);
-  giocate.forEach(p => (p.marcatoriNostri || []).forEach(m => gol[m.num] = (gol[m.num] || 0) + m.gol));
-  const max = Math.max(1, ...Object.values(gol));
-  const righe = SQUADRA.slice().sort((a, b) => gol[b.num] - gol[a.num] || a.num - b.num);
+  const extra = {};
+  giocate.forEach(p => (p.marcatoriNostri || []).forEach(m => {
+    if (m.num != null) gol[m.num] = (gol[m.num] || 0) + m.gol;
+    else extra[m.nome] = (extra[m.nome] || 0) + m.gol;
+  }));
+  const tutti = SQUADRA.map(p => ({ ...p, g: gol[p.num] || 0 }))
+    .concat(Object.entries(extra).map(([nome, g]) => ({ num: null, nome, g })));
+  const max = Math.max(1, ...tutti.map(p => p.g));
+  const righe = tutti.sort((a, b) => b.g - a.g || (a.num ?? 999) - (b.num ?? 999));
   let pos = 0, prev = null;
   document.getElementById("scorers").innerHTML = righe.map((p, i) => {
-    if (gol[p.num] !== prev) { pos = i + 1; prev = gol[p.num]; }
-    const g = gol[p.num];
+    if (p.g !== prev) { pos = i + 1; prev = p.g; }
+    const g = p.g;
     const nome = uscito(p) ? `${p.nome}${p.capitano ? " <small>(C)</small>" : ""}` : `<small>In arrivo</small>`;
     return `<div class="srow ${g === 0 ? "zero" : ""} ${g > 0 && g === max ? "top" : ""}">
-      <span class="pos">${pos}°</span><span class="n">${p.num}</span><span class="who">${nome}</span>
+      <span class="pos">${pos}°</span><span class="n">${p.num ?? "–"}</span><span class="who">${nome}</span>
       <span class="bar"><i style="width:${(g / max * 100).toFixed(0)}%"></i></span><span class="g">${g}</span></div>`;
   }).join("");
 }
